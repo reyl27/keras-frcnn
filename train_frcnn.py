@@ -81,8 +81,10 @@ else:
 	# set the path to weights based on backend and model
 	C.base_net_weights = nn.get_weight_path()
 
-train_imgs, classes_count, class_mapping = get_data(options.train_path, 'trainval')
-val_imgs, _, _ = get_data(options.train_path, 'test')
+#train_imgs, classes_count, class_mapping = get_data(options.train_path, 'trainval')
+train_imgs, classes_count, class_mapping = get_data(options.train_path)
+#val_imgs, _, _ = get_data(options.train_path, 'test')
+val_imgs, _, _ = get_data(options.train_path)
 
 if 'bg' not in classes_count:
 	classes_count['bg'] = 0
@@ -109,14 +111,14 @@ num_imgs = len(train_imgs)
 #train_imgs = [s for s in all_imgs if s['imageset'] == 'trainval']
 #val_imgs = [s for s in all_imgs if s['imageset'] == 'test']
 
-print(f'Num train samples {len(train_imgs}')
+print(f'Num train samples {len(train_imgs)}')
 print(f'Num val samples {len(val_imgs)}')
 
 
-data_gen_train = data_generators.get_anchor_gt(train_imgs, classes_count, C, nn.get_img_output_length, K.common.image_dim_ordering(), mode='train')
-data_gen_val = data_generators.get_anchor_gt(val_imgs, classes_count, C, nn.get_img_output_length,K.common.image_dim_ordering(), mode='val')
+data_gen_train = data_generators.get_anchor_gt(train_imgs, classes_count, C, nn.get_img_output_length, K.image_data_format(), mode='train')
+data_gen_val = data_generators.get_anchor_gt(val_imgs, classes_count, C, nn.get_img_output_length,K.image_data_format(), mode='val')
 
-if K.common.image_dim_ordering() == 'th':
+if K.image_data_format() == 'channels_first':
 	input_shape_img = (3, None, None)
 else:
 	input_shape_img = (None, None, 3)
@@ -190,7 +192,7 @@ for epoch_num in range(num_epochs):
 
 			P_rpn = model_rpn.predict_on_batch(X)
 
-			R = roi_helpers.rpn_to_roi(P_rpn[0], P_rpn[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
+			R = roi_helpers.rpn_to_roi(P_rpn[0], P_rpn[1], C, K.image_data_format(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
 			# note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
 			X2, Y1, Y2, IouS = roi_helpers.calc_iou(R, img_data, C, class_mapping)
 
@@ -260,7 +262,7 @@ for epoch_num in range(num_epochs):
 				rpn_accuracy_for_epoch = []
 
 				if C.verbose:
-					print(f'Mean number of bounding boxes from RPN overlapping ground truth boxes: {mean_overlapping_boxes}')
+					print(f'Mean number of bounding boxes from RPN overlapping ground truth boxes: {mean_overlapping_bboxes}')
 					print(f'Classifier accuracy for bounding boxes from RPN: {class_acc}')
 					print(f'Loss RPN classifier: {loss_rpn_cls}')
 					print(f'Loss RPN regression: {loss_rpn_regr}')
